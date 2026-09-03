@@ -11,7 +11,7 @@
 
 #include "matmul.h"
 
-#define BLK 16
+#define BLK 32
 
 void matmul_optimized(const float *A, const float *B, float *C,
                       int M, int N, int K, int lda, int ldb, int ldc) {
