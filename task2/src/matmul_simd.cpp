@@ -1,10 +1,10 @@
-#include <immintrin.h>
 #include "matmul.h"
+#include <immintrin.h>
 
 static inline float hsum256(__m256 v) {
-    __m128 low  = _mm256_castps256_ps128(v);
+    __m128 low = _mm256_castps256_ps128(v);
     __m128 high = _mm256_extractf128_ps(v, 1);
-    __m128 sum  = _mm_add_ps(low, high);
+    __m128 sum = _mm_add_ps(low, high);
     __m128 sum2 = _mm_movehl_ps(sum, sum);
     __m128 sum3 = _mm_add_ps(sum, sum2);
     __m128 suM = _mm_movehdup_ps(sum3);
@@ -13,9 +13,12 @@ static inline float hsum256(__m256 v) {
 
 void matmul_simd(const float *A, const float *B, float *C,
                  int M, int N, int K, int lda, int ldb, int ldc) {
-                    
-    for (int i = 0; i < M; i += 4) {
-        for (int j = 0; j < N; j += 2) {
+
+    int M4 = M - (M % 4);
+    int N2 = N - (N % 2);
+
+    for (int i = 0; i < M4; i += 4) {
+        for (int j = 0; j < N2; j += 2) {
             __m256 acc00 = _mm256_setzero_ps();
             __m256 acc01 = _mm256_setzero_ps();
             __m256 acc10 = _mm256_setzero_ps();
@@ -25,13 +28,13 @@ void matmul_simd(const float *A, const float *B, float *C,
             __m256 acc30 = _mm256_setzero_ps();
             __m256 acc31 = _mm256_setzero_ps();
 
-            const float* a0 = A + static_cast<long>(i + 0) * lda;
-            const float* a1 = A + static_cast<long>(i + 1) * lda;
-            const float* a2 = A + static_cast<long>(i + 2) * lda;
-            const float* a3 = A + static_cast<long>(i + 3) * lda;
+            const float *a0 = A + static_cast<long>(i + 0) * lda;
+            const float *a1 = A + static_cast<long>(i + 1) * lda;
+            const float *a2 = A + static_cast<long>(i + 2) * lda;
+            const float *a3 = A + static_cast<long>(i + 3) * lda;
 
-            const float* b0 = B + static_cast<long>(j + 0) * ldb;
-            const float* b1 = B + static_cast<long>(j + 1) * ldb;
+            const float *b0 = B + static_cast<long>(j + 0) * ldb;
+            const float *b1 = B + static_cast<long>(j + 1) * ldb;
 
             for (int p = 0; p < K; p += 8) {
                 __m256 va0 = _mm256_loadu_ps(a0 + p);
@@ -69,6 +72,16 @@ void matmul_simd(const float *A, const float *B, float *C,
             C[static_cast<long>(i + 2) * ldc + (j + 1)] = s21;
             C[static_cast<long>(i + 3) * ldc + (j + 0)] = s30;
             C[static_cast<long>(i + 3) * ldc + (j + 1)] = s31;
+        }
+    }
+
+    for (int i = M4; i < M; i++) {
+        for (int j = N2; j < N; j++) {
+            float acc = 0.0f;
+            for (int p = 0; p < K; p++) {
+                acc += A[i * lda + p] * B[j * ldb + p];
+            }
+            C[i * ldc + j] = acc;
         }
     }
 }
