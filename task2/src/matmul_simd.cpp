@@ -75,8 +75,18 @@ void matmul_simd(const float *A, const float *B, float *C,
         }
     }
 
-    for (int i = M4; i < M; i++) {
+    for (int i = 0; i < M4; i++) {
         for (int j = N2; j < N; j++) {
+            float acc = 0.0f;
+            for (int p = 0; p < K; p++) {
+                acc += A[i * lda + p] * B[j * ldb + p];
+            }
+            C[i * ldc + j] = acc;
+        }
+    }
+
+    for (int i = M4; i < M; i++) {
+        for (int j = 0; j < N; j++) {
             float acc = 0.0f;
             for (int p = 0; p < K; p++) {
                 acc += A[i * lda + p] * B[j * ldb + p];
