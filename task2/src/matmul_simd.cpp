@@ -104,21 +104,27 @@ void matmul_simd(const float *A, const float *B, float *C,
 
     for (int i = 0; i < M4; i++) {
         for (int j = N2; j < N; j++) {
-            float acc = 0.0f;
-            for (int p = 0; p < K; p++) {
-                acc += A[i * lda + p] * B[j * ldb + p];
+            SIMD_REG acc = SIMD_SETZERO;
+            for (int p = 0; p < K; p += SIMD_STRIDE) {
+                acc = SIMD_FMA(
+                    SIMD_LOAD(A + static_cast<long>(i) * lda + p), 
+                    SIMD_LOAD(B + static_cast<long>(j) * ldb + p), 
+                    acc);
             }
-            C[i * ldc + j] = acc;
+            C[i * ldc + j] = SIMD_HSUM(acc);
         }
     }
 
     for (int i = M4; i < M; i++) {
         for (int j = 0; j < N; j++) {
-            float acc = 0.0f;
-            for (int p = 0; p < K; p++) {
-                acc += A[i * lda + p] * B[j * ldb + p];
+            SIMD_REG acc = SIMD_SETZERO;
+            for (int p = 0; p < K; p += SIMD_STRIDE) {
+                acc = SIMD_FMA(
+                    SIMD_LOAD(A + static_cast<long>(i) * lda + p), 
+                    SIMD_LOAD(B + static_cast<long>(j) * ldb + p), 
+                    acc);
             }
-            C[i * ldc + j] = acc;
+            C[i * ldc + j] = SIMD_HSUM(acc);
         }
     }
 }
